@@ -98,11 +98,14 @@ class PyLouvain:
         self.communities = [n for n in nodes]
         self.actual_partition = []
 
-
     '''
         Applies the Louvain method.
     '''
-    def apply_method(self):
+    def apply_method(self, gamma = 1.):
+
+        # setup the resolution gamma value
+        self.gamma = gamma
+
         network = (self.nodes, self.edges)
         best_partition = [[node] for node in network[0]]
         best_q = -1
@@ -140,7 +143,7 @@ class PyLouvain:
         q = 0
         m2 = self.m * 2
         for i in range(len(partition)):
-            q += self.s_in[i] / m2 - (self.s_tot[i] / m2) ** 2
+            q += self.s_in[i] / m2 - self.gamma * (self.s_tot[i] / m2) ** 2
         return q
 
     '''
@@ -150,7 +153,7 @@ class PyLouvain:
         _k_i_in: the sum of the weights of the links from _node to nodes in _c
     '''
     def compute_modularity_gain(self, node, c, k_i_in):
-        return 2 * k_i_in - self.s_tot[c] * self.k_i[node] / self.m
+        return 2 * k_i_in - self.gamma * self.s_tot[c] * self.k_i[node] / self.m
 
     '''
         Performs the first phase of the method.
@@ -279,7 +282,8 @@ class PyLouvain:
                 self.edges_of_node[e[0][1]] = [e]
             elif e[0][0] != e[0][1]:
                 self.edges_of_node[e[0][1]].append(e)
-        # resetting communities
+
+        # Resetting communities
         self.communities = [n for n in nodes_]
         return (nodes_, edges_)
 
@@ -289,17 +293,18 @@ class PyLouvain:
     _edges: a list of ((int, int), weight) pairs
 '''
 def in_order(nodes, edges):
-        # rebuild graph with successive identifiers
-        nodes = list(nodes.keys())
-        nodes.sort()
-        i = 0
-        nodes_ = []
-        d = {}
-        for n in nodes:
-            nodes_.append(i)
-            d[n] = i
-            i += 1
-        edges_ = []
-        for e in edges:
-            edges_.append(((d[e[0][0]], d[e[0][1]]), e[1]))
-        return (nodes_, edges_)
+    # rebuild graph with successive identifiers
+    nodes = list(nodes.keys())
+    nodes.sort()
+    i = 0
+    nodes_ = []
+    d = {}
+    for n in nodes:
+        nodes_.append(i)
+        d[n] = i
+        i += 1
+
+    edges_ = []
+    for e in edges:
+        edges_.append(((d[e[0][0]], d[e[0][1]]), e[1]))
+    return (nodes_, edges_)
