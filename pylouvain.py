@@ -162,7 +162,11 @@ class PyLouvain:
     def first_phase(self, network):
         # make initial partition
         best_partition = self.make_initial_partition(network)
-        while 1:
+
+        cnt_termination = len(network[0]) * 10 
+        while cnt_termination > 0:
+            cnt_termination -= 1
+
             improvement = 0
             for node in network[0]:
                 node_community = self.communities[node]
