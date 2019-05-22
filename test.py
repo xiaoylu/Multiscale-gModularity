@@ -2,23 +2,30 @@ import matplotlib
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 import pickle
+import time
 import numpy as np
 from sklearn import metrics
 
 from pylouvain import PyLouvain
 from run import multiscale, bayes_model_selection
+import os.path
 
 def hist(sizes_distri, figname):
   plt.clf()
   marker = ['b*-', 'rx-', 'ko-.']
-  mybins = [0] + list(np.logspace(np.log10(30), np.log10(1000), 8)) 
+  mybins = [0] + list(np.logspace(np.log10(15), np.log10(1000), 8)) 
   print(mybins)
 
   for i, label in enumerate(sorted(sizes_distri.keys())):
     a = sizes_distri[label]
     hist, bin_edges = np.histogram(a, bins = mybins)
     print(bin_edges)
-    plt.plot(bin_edges[:-1], hist, marker[i], label=label, linewidth = 2, markersize = 10) 
+    x, y = zip(*[(a, b) for a, b in zip(bin_edges[:-1], hist) if b > 0])
+
+    print("bin", bin_edges)
+    print("count", hist)
+
+    plt.plot(x, y, marker[i], label=label, linewidth = 2, markersize = 10) 
 
   ax = plt.gca()
   ax.set_yscale('log')
@@ -29,21 +36,40 @@ def hist(sizes_distri, figname):
   plt.savefig("fig/hist_sizes_%s.png" % figname)
   print("Save figure named \"fig/hist_sizes_%s.png\"" % figname)
 
-
 ##########################################################################################
 
-def test(graphname):
+def test(graphname, gnc = None):
     pyl = PyLouvain.from_file("data/%s.txt" % graphname)
-    partition, q = pyl.apply_method()
 
-    partition2 = multiscale(pyl.nodes, pyl.edges, 0.5)
+    name_pickle = 'fig/save_%s_%d.p' % (graphname, len(pyl.nodes))
+    if not os.path.isfile(name_pickle):
 
-    sizes_distri = {"Modularity": [len(p) for p in partition], "MultiScale": [len(p) for p in partition2]}
-    pickle.dump(sizes_distri, open('fig/save_%s_%d.p' % (graphname, len(pyl.nodes)), 'wb'))
+      start = time.time()
+      partition, q = pyl.apply_method()
+      print("Modularity Time", time.time() - start)
+
+      start = time.time()
+      partition2 = multiscale(pyl.nodes, pyl.edges, 0.5)
+      print("Multiscale Time", time.time() - start)
+
+      print(name_pickle, "missing")
+
+      sizes_distri = {"Modularity": [len(p) for p in partition], "MultiScale": [len(p) for p in partition2]}
+
+      pickle.dump(sizes_distri, open(name_pickle, 'wb'))
+      print("Pickle save", name_pickle)
+
+    sizes_distri = pickle.load(open(name_pickle, "rb"))
+
+    if gnc:
+      gnc_fp = open(gnc, "r+")
+      sizes_distri["Ground Truth"] = [len(line.split()) for line in gnc_fp] 
+
     hist(sizes_distri, graphname)
 
-#test("arxiv")
 #test("hep-th-citations")
+#test("com-amazon.ungraph", "data/com-amazon.all.dedup.cmty.txt")
+
 
 def test_citations():
     pyl = PyLouvain.from_file("data/hep-th-citations")
@@ -108,7 +134,7 @@ def test_football():
     plt.savefig("fig/football2.png")
 
 
-test_football()
+#test_football()
 
 def test_football2():
 

@@ -20,7 +20,7 @@ import pickle
 from networkx.algorithms.community.modularity_max import * 
 from networkx.algorithms.community import LFR_benchmark_graph
 from sklearn.metrics.cluster import adjusted_rand_score, normalized_mutual_info_score
-from heatmap import hist
+from test import hist
 
 from pylouvain import PyLouvain
 from run import multiscale
@@ -39,7 +39,6 @@ def LFR(n, tau1, tau2, mu, min_com_size, force = False):
         return G
 
 if __name__ == "__main__":
-
     verbose = False 
 
     #=========== Global Parameters ===========#
@@ -103,7 +102,7 @@ if __name__ == "__main__":
     print("Start Multi-scale Community Detection")
 
     start = time.time()
-    commsMS = multiscale(nodes, edges, 0.6, verbose = False)
+    commsMS = multiscale(nodes, edges, 0.8, verbose = True)
     end = time.time()
 
     commsMS_sizes = sorted([len(commsMS[i]) for i in range(len(commsMS))])
@@ -116,8 +115,7 @@ if __name__ == "__main__":
     print("which takes", end - start, "seconds")
 
     #============ Plot community sizes ==============#
-    #print("Plot histogram of community sizes")
-    #sizes_distri = {"Ground Truth": gnc_sizes, "Modularity": commsFG_sizes, "Multiscale": commsMS_sizes}
+    print("Plot histogram of community sizes")
+    sizes_distri = {"Ground Truth": gnc_sizes, "Modularity": commsLV_sizes, "Multiscale": commsMS_sizes}
 
-    #pickle.dump(sizes_distri, open('save%d.p' % _network_size, 'wb'))
-    #hist(sizes_distri, _network_size)
+    hist(sizes_distri, "LFR")

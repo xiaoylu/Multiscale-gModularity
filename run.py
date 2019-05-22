@@ -27,13 +27,22 @@ def bayes_model_selection(nodes, edges, partition):
     assert d >= 0
 
     res = 0.
-    if a > 0: res += a * (np.log(a) - np.log(b))
-    if c > 0: res += c * (np.log(c) - np.log(d))
+    if a > 0: 
+        #res += a * (np.log(a) - np.log(b))
+        res += a * np.log(a) - (a + 1) * np.log(b + 1)
+    if c > 0:
+        #res += c * (np.log(c) - np.log(d))
+        res += c * np.log(c) - (c + 1) * np.log(d + 1)
+    
+    res += (2. * E + 1) * np.log(2. * E + 1) - 2. * E * np.log(2. * E)
 
-    ent = scipy.stats.entropy([float(len(c))/N for c in partition])
-    return res - N * ent
+    ent1 = scipy.stats.entropy([float(len(c))/N for c in partition])
+    ent2 = scipy.stats.entropy([len(partition)/N, 1.-len(partition)/N])
 
-def multiscale(nodes, edges, gamma, depth = 1, verbose = False):
+    #return res - N * (ent1 + ent2)
+    return res / N - (ent1 + ent2)
+
+def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
     '''
     Multi-scale community detection.
     Recursively split sub-graph by maximizing generalized modularity.
@@ -47,6 +56,9 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False):
         a list of lists, each contains the nodes in a community
     '''
 
+    if depth >= max_depth:
+        return [nodes]
+
     verbose and print("    " * depth, "***", "depth=", depth, "N=", len(nodes))
 
     nodes.sort()
@@ -58,12 +70,12 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False):
     pyl = PyLouvain(nodes, edges)
 
     partition, q = pyl.apply_method(gamma)
-    verbose and print("    " * depth, "Comm Size=", len(partition))
+    verbose and print("    " * depth, "gamma=", gamma, "comm=", len(partition))
 
     if len(partition) < 2: return [list(map(rd.get, nodes))]
     odds = bayes_model_selection(pyl.nodes, pyl.edges, partition)
     verbose and print("    " * depth, "odds=", odds)
-    if odds < 0 or math.isnan(odds): return [list(map(rd.get, nodes))]
+    if odds <= 1.0 or math.isnan(odds): return [list(map(rd.get, nodes))]
 
     comm = {n:i for i, ns in enumerate(partition) for n in ns}
     edge_list = [[] for _ in range(len(partition))]
@@ -74,7 +86,7 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False):
 
     R = []
     for nodes_, edges_ in zip(partition, edge_list):
-        groups = multiscale(nodes_, edges_, gamma, depth + 1, verbose)
+        groups = multiscale(nodes_, edges_, gamma, depth + 1, verbose, max_depth)
         for grp in groups :
             R.append([rd[n] for n in grp])
 

@@ -86,49 +86,6 @@ def draw(G, colormap):
     plt.savefig("network.png", bbox_inches="tight")
     print("Save figure to", "network.png") 
 
-def hist(null_distri, LRtest, figname, pvalue):
-  plt.clf()
-  #kde = scipy.stats.gaussian_kde(null_distri,bw_method=None) 
-  #t_range = np.linspace(-1,8,100)
-  #plt.plot(t_range,kde(t_range),lw=2, label='KDE')
-
-  fig, ax = plt.subplots(1) 
-
-  try:
-    plt.hist(null_distri, bins=50, density=True, facecolor='green', alpha=0.3)
-  except:
-    print("unknow error in hist plot. pass")
-    return
-
-  rv = scipy.stats.chi2(1) # only one extra dimension of freedom
-  rvx = np.linspace(0.1, 7, num=40)
-
-  plt.plot(rvx, rv.pdf(rvx), 'b-', lw=2)
-
-  # vertical line
-  plt.plot([LRtest, LRtest], [0,rv.pdf(LRtest)], c = 'k', lw = 3)
-
-  rtail_x = np.linspace(LRtest, 7, num=30)
-  rtail_y = rv.pdf(rtail_x)
-  ax.fill_between(rtail_x, 0, rtail_y, facecolor='yellow', alpha=0.9)
-
-  # Hide the right and top spines
-  ax.spines['right'].set_visible(False)
-  ax.spines['top'].set_visible(False)
-
-  #plt.xlabel(r"$\Lambda_{\bf \hat{g}}$",size=23)
-  #plt.ylabel(r"Probablity Density",size=18)
-  plt.tick_params(axis='both', which='major', labelsize=30)
-  plt.xlim([-0.2, 7])
-  plt.ylim([0, 1.2])
-
-  plt.tight_layout()
-  plt.text(1, 0.8, r"LLR test=%.4f" % LRtest,fontsize=28)
-  plt.text(2.5, 0.3, r"pvalue=%.4f" % pvalue,fontsize=28)
-  name = "pvalue_%s_%.4f.pdf" % (figname, pvalue)
-  plt.savefig(name)
-  print("Savefig", name)
-
 def hist(sizes_distri, figname):
   plt.clf()
   marker = ['b*-', 'rx-', 'ko-.']
@@ -139,7 +96,9 @@ def hist(sizes_distri, figname):
   for i, label in enumerate(sorted(sizes_distri.keys())):
     a = sizes_distri[label]
     hist, bin_edges = np.histogram(a, bins = mybins)
-    print(bin_edges)
+    print("bin", bin_edges)
+    print("count", hist)
+
     plt.plot(bin_edges[:-1], hist, marker[i], label=label, linewidth = 2, markersize = 10)
 
   #ax = plt.gca()
