@@ -108,7 +108,6 @@ if __name__ == "__main__":
     '''
 
     #=========== Multi-scale Community Detection ===============#
-
     print("Start Multi-scale Community Detection")
 
     x, y1, y2, y3, y4 = [], [], [], [], []
@@ -123,7 +122,7 @@ if __name__ == "__main__":
         commsMS_sizes = sorted([len(commsMS[i]) for i in range(len(commsMS))])
         verbose and print(commsMS_sizes)
         verbose and print(len(commsMS_sizes))
-
+        
         map_comm = {v:i for i, c in enumerate(commsMS) for v in c}
         MS_list = [map_comm[k] for k in G.nodes()]
         print("Multi-scale Algorithm ARI=", adjusted_rand_score(MS_list, gnc_list), "NMI=", normalized_mutual_info_score(MS_list, gnc_list))
@@ -138,9 +137,7 @@ if __name__ == "__main__":
     pickle.dump({'x':x,'y1':y1,'y2':y2,'y3':y3}, open("fig/save_louvain_generalized_modularity.p", "wb" ) )
     exit(0)
 
-
     #============ Plot community sizes ==============#
-
     #print("Plot histogram of community sizes")
     #sizes_distri = {"Ground Truth": gnc_sizes, "Modularity": commsFG_sizes, "Multiscale": commsMS_sizes}
 

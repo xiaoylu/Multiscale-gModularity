@@ -97,12 +97,14 @@ if __name__ == "__main__":
     LV_list = [map_comm[k] for k in G.nodes()]
     print("Louvain Algorithm ARI=", adjusted_rand_score(LV_list, gnc_list), "NMI=", normalized_mutual_info_score(LV_list, gnc_list))
     print("which takes", end - start, "seconds")
+    print("Size range = ", min(commsLV_sizes), max(commsLV_sizes))
+    print()
 
     #=========== Multi-scale Community Detection ===============#
     print("Start Multi-scale Community Detection")
 
     start = time.time()
-    commsMS = multiscale(nodes, edges, 0.8, verbose = True)
+    commsMS = multiscale(nodes, edges, 0.8, verbose = False)
     end = time.time()
 
     commsMS_sizes = sorted([len(commsMS[i]) for i in range(len(commsMS))])
@@ -113,9 +115,9 @@ if __name__ == "__main__":
     MS_list = [map_comm[k] for k in G.nodes()]
     print("Multi-scale Algorithm ARI=", adjusted_rand_score(MS_list, gnc_list), "NMI=", normalized_mutual_info_score(MS_list, gnc_list))
     print("which takes", end - start, "seconds")
+    print("Size range = ", min(commsMS_sizes), max(commsMS_sizes))
 
     #============ Plot community sizes ==============#
     print("Plot histogram of community sizes")
     sizes_distri = {"Ground Truth": gnc_sizes, "Modularity": commsLV_sizes, "Multiscale": commsMS_sizes}
-
     hist(sizes_distri, "LFR")

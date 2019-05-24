@@ -13,22 +13,23 @@ import os.path
 def hist(sizes_distri, figname):
   plt.clf()
   marker = ['b*-', 'rx-', 'ko-.']
-  mybins = [0] + list(np.logspace(np.log10(15), np.log10(1000), 8)) 
+  mybins = [0] + list(np.logspace(np.log10(5), np.log10(10000), 15)) 
   print(mybins)
 
   for i, label in enumerate(sorted(sizes_distri.keys())):
     a = sizes_distri[label]
+    print(min(a), max(a), sum(a))
     hist, bin_edges = np.histogram(a, bins = mybins)
-    print(bin_edges)
-    x, y = zip(*[(a, b) for a, b in zip(bin_edges[:-1], hist) if b > 0])
+    x, y = zip(*[(a, b) for a, b in zip(bin_edges[1:], hist) if b > 0])
+    print(label, hist)
+    
+    y_norm = y / sum(y)
 
-    print("bin", bin_edges)
-    print("count", hist)
-
-    plt.plot(x, y, marker[i], label=label, linewidth = 2, markersize = 10) 
+    plt.plot(x, y_norm, marker[i], label=label, linewidth = 2, markersize = 10) 
 
   ax = plt.gca()
-  ax.set_yscale('log')
+  ax.set_xscale('log')
+  #ax.set_yscale('log')
 
   plt.tick_params(axis='both', which='major', labelsize=25)
   plt.legend(loc = "upper right", fontsize = 20)
@@ -43,6 +44,7 @@ def test(graphname, gnc = None):
 
     name_pickle = 'fig/save_%s_%d.p' % (graphname, len(pyl.nodes))
     if not os.path.isfile(name_pickle):
+      print("pickle file", name_pickle, "is missing. Recompute.")
 
       start = time.time()
       partition, q = pyl.apply_method()
@@ -52,24 +54,43 @@ def test(graphname, gnc = None):
       partition2 = multiscale(pyl.nodes, pyl.edges, 0.5)
       print("Multiscale Time", time.time() - start)
 
-      print(name_pickle, "missing")
-
+      results = {"LV": partition, "MS": partition2}
       sizes_distri = {"Modularity": [len(p) for p in partition], "MultiScale": [len(p) for p in partition2]}
 
-      pickle.dump(sizes_distri, open(name_pickle, 'wb'))
+      pickle.dump(results, open(name_pickle, 'wb'))
       print("Pickle save", name_pickle)
-
-    sizes_distri = pickle.load(open(name_pickle, "rb"))
+    else:
+      print("pickle file", name_pickle, "is found.")
+      
+      results = pickle.load(open(name_pickle, "rb"))
+      sizes_distri = {"Modularity": [len(p) for p in results["LV"]], "MultiScale": [len(p) for p in results["MS"]]}
 
     if gnc:
       gnc_fp = open(gnc, "r+")
-      sizes_distri["Ground Truth"] = [len(line.split()) for line in gnc_fp] 
+      gnc_map = {}
+      sizes_distri["Ground Truth"] = []
+      for i, line in enumerate(gnc_fp):
+        x = line.split()
+        sizes_distri["Ground Truth"].append(len(x)) 
+        for j in x:
+          gnc_map[int(j)] = i
+      
+      gnc_list = [gnc_map[k] for k in pyl.nodes]
+      
+      lv_map = {v:i for i, c in enumerate(partition) for v in c}
+      lv_list = [lv_map[k] for k in pyl.nodes]
+
+      ms_map = {v:i for i, c in enumerate(partition2) for v in c}
+      ms_list = [ms_map[k] for k in pyl.nodes]
+
+      print("Louvain NMI=", normalized_mutual_info_score(lv_list, gnc_list) )
+      print("Multi-scale NMI=", normalized_mutual_info_score(ms_list, gnc_list) )
 
     hist(sizes_distri, graphname)
 
 #test("hep-th-citations")
 #test("com-amazon.ungraph", "data/com-amazon.all.dedup.cmty.txt")
-
+test("com-dblp.ungraph", "data/com-dblp.all.cmty.txt")
 
 def test_citations():
     pyl = PyLouvain.from_file("data/hep-th-citations")
@@ -103,7 +124,7 @@ def test_football():
     order_ = {i:stri for i, stri in enumerate(sorted(gnc.keys()))}
 
     x, y, z, r = [], [], [], []
-    for gamma in np.linspace(0.5, 3.5, num = 35): 
+    for gamma in np.linspace(0.5, 8.5, num = 35): 
         pyl = PyLouvain.from_file("data/football.txt")
         partition, q = pyl.apply_method(gamma)
         odds = bayes_model_selection(pyl.nodes, pyl.edges, partition)
@@ -120,8 +141,7 @@ def test_football():
 
         r.append(metrics.adjusted_mutual_info_score(a, b))
         #r.append(metrics.adjusted_rand_score(a, b))
-   
-
+    
     plt.plot(x, y, 'r-*', markersize=10)
     ax1 = plt.gca()
     ax1.tick_params(axis='x', labelsize=18)
@@ -132,7 +152,6 @@ def test_football():
     plt.tight_layout()
 
     plt.savefig("fig/football2.png")
-
 
 #test_football()
 

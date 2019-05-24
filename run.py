@@ -7,6 +7,16 @@ import scipy
 from scipy.stats import entropy
 from pylouvain import PyLouvain, in_order
 
+fast_fact = [1,1]
+for i in range(2, 50):
+    fast_fact.append(fast_fact[-1] * i)
+
+def fact(i):
+    l = len(fast_fact)
+    while l < i:
+        fast_fact.append(fast_fact[-1] * l)
+        l += 1
+    return fast_fact[i]
 
 def bayes_model_selection(nodes, edges, partition):
     N, E = len(nodes), len(edges)
@@ -37,9 +47,12 @@ def bayes_model_selection(nodes, edges, partition):
     res += (2. * E + 1) * np.log(2. * E + 1) - 2. * E * np.log(2. * E)
 
     ent1 = scipy.stats.entropy([float(len(c))/N for c in partition])
+    
+    #if N > 50:
     ent2 = scipy.stats.entropy([len(partition)/N, 1.-len(partition)/N])
+    #else:
+    #    ent2 = np.log( fact(N) / fact(N - len(partition)) / fact(len(partition)) )
 
-    #return res - N * (ent1 + ent2)
     return res / N - (ent1 + ent2)
 
 def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
@@ -75,7 +88,7 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
     if len(partition) < 2: return [list(map(rd.get, nodes))]
     odds = bayes_model_selection(pyl.nodes, pyl.edges, partition)
     verbose and print("    " * depth, "odds=", odds)
-    if odds <= 1.0 or math.isnan(odds): return [list(map(rd.get, nodes))]
+    if odds <= 1. or math.isnan(odds): return [list(map(rd.get, nodes))]
 
     comm = {n:i for i, ns in enumerate(partition) for n in ns}
     edge_list = [[] for _ in range(len(partition))]
