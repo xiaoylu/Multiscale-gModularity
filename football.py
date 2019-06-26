@@ -40,4 +40,3 @@ ax2.tick_params(axis='y', labelcolor='m', labelsize=15)
 plt.tight_layout()
 
 plt.savefig("fig/football_multi_scale.png")
-

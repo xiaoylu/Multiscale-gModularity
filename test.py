@@ -90,7 +90,7 @@ def test(graphname, gnc = None):
 
 #test("hep-th-citations")
 #test("com-amazon.ungraph", "data/com-amazon.all.dedup.cmty.txt")
-test("com-dblp.ungraph", "data/com-dblp.all.cmty.txt")
+#test("com-dblp.ungraph", "data/com-dblp.all.cmty.txt")
 
 def test_citations():
     pyl = PyLouvain.from_file("data/hep-th-citations")
