@@ -7,17 +7,6 @@ import scipy
 from scipy.stats import entropy
 from pylouvain import PyLouvain, in_order
 
-fast_fact = [1,1]
-for i in range(2, 50):
-    fast_fact.append(fast_fact[-1] * i)
-
-def fact(i):
-    l = len(fast_fact)
-    while l < i:
-        fast_fact.append(fast_fact[-1] * l)
-        l += 1
-    return fast_fact[i]
-
 def bayes_model_selection(nodes, edges, partition):
     N, E = len(nodes), len(edges)
     comm = {n:i for i, ns in enumerate(partition) for n in ns}
@@ -43,19 +32,18 @@ def bayes_model_selection(nodes, edges, partition):
     if c > 0:
         #res += c * (np.log(c) - np.log(d))
         res += c * np.log(c) - (c + 1) * np.log(d + 1)
-    
+
     res += (2. * E + 1) * np.log(2. * E + 1) - 2. * E * np.log(2. * E)
 
+    # entropy of len(c) nodes in each blocks (and sum(c) = N)
     ent1 = scipy.stats.entropy([float(len(c))/N for c in partition])
-    
-    #if N > 50:
-    ent2 = scipy.stats.entropy([len(partition)/N, 1.-len(partition)/N])
-    #else:
-    #    ent2 = np.log( fact(N) / fact(N - len(partition)) / fact(len(partition)) )
 
+    # entropy of B blocks (B in range [1, N])
+    ent2 = scipy.stats.entropy([len(partition)/N, 1.-len(partition)/N])
+    
     return res / N - (ent1 + ent2)
 
-def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
+def multiscale(nodes, edges, gamma, deg = None, depth = 1, verbose = False, max_depth = 4):
     '''
     Multi-scale community detection.
     Recursively split sub-graph by maximizing generalized modularity.
@@ -69,7 +57,7 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
         a list of lists, each contains the nodes in a community
     '''
 
-    if depth >= max_depth:
+    if depth >= max_depth or len(nodes) < 2:
         return [nodes]
 
     verbose and print("    " * depth, "***", "depth=", depth, "N=", len(nodes))
@@ -79,9 +67,16 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
     rd = {i:n for n, i in d.items()}
     nodes = list(range(len(d))) 
     edges = [((d[e[0][0]], d[e[0][1]]), e[1]) for e in edges]
+    
+    if deg is None:
+        deg = {i:0 for i in nodes}
+        for e in edges:
+            deg[e[0][0]] += e[1]
+            deg[e[0][1]] += e[1]
 
-    pyl = PyLouvain(nodes, edges)
+    pyl = PyLouvain(nodes, edges, deg)
 
+    # execution
     partition, q = pyl.apply_method(gamma)
     verbose and print("    " * depth, "gamma=", gamma, "comm=", len(partition))
 
@@ -99,7 +94,7 @@ def multiscale(nodes, edges, gamma, depth = 1, verbose = False, max_depth = 4):
 
     R = []
     for nodes_, edges_ in zip(partition, edge_list):
-        groups = multiscale(nodes_, edges_, gamma, depth + 1, verbose, max_depth)
+        groups = multiscale(nodes_, edges_, gamma, deg, depth + 1, verbose, max_depth)
         for grp in groups :
             R.append([rd[n] for n in grp])
 

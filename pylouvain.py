@@ -31,7 +31,7 @@ class PyLouvain:
         # rebuild graph with successive identifiers
         nodes_, edges_ = in_order(nodes, edges)
         print("%d nodes, %d edges" % (len(nodes_), len(edges_)))
-        return cls(nodes_, edges_)
+        return nodes_, edges_
 
     '''
         Builds a graph from _path.
@@ -63,16 +63,16 @@ class PyLouvain:
                 edges.append(((current_edge[0], current_edge[1]), 1))
                 current_edge = (-1, -1, 1)
                 in_edge = 0
-        nodes, edges = in_order(nodes, edges)
-        print("%d nodes, %d edges" % (len(nodes), len(edges)))
-        return cls(nodes, edges)
+        nodes_, edges_ = in_order(nodes, edges)
+        print("%d nodes, %d edges" % (len(nodes_), len(edges_)))
+        return nodes_, edges_
 
     '''
         Initializes the method.
         _nodes: a list of ints
         _edges: a list of ((int, int), weight) pairs
     '''
-    def __init__(self, nodes, edges):
+    def __init__(self, nodes, edges, deg = None):
         self.nodes = nodes
         self.edges = edges
         # precompute m (sum of the weights of all links in network)
@@ -81,6 +81,7 @@ class PyLouvain:
         self.k_i = [0 for n in nodes]
         self.edges_of_node = {}
         self.w = [0 for n in nodes]
+        
         for e in edges:
             self.m += e[1]
             self.k_i[e[0][0]] += e[1]
@@ -97,7 +98,13 @@ class PyLouvain:
         # access community of a node in O(1) time
         self.communities = [n for n in nodes]
         self.actual_partition = []
-
+        
+        # xiaoyan1       
+        if deg is None:
+            self.k_i_extra = {i:0 for i in self.nodes} 
+        else:
+            self.k_i_extra = {i:deg[i] - self.k_i[i] for i in self.nodes} 
+        
     '''
         Applies the Louvain method.
     '''
@@ -153,7 +160,7 @@ class PyLouvain:
         _k_i_in: the sum of the weights of the links from _node to nodes in _c
     '''
     def compute_modularity_gain(self, node, c, k_i_in):
-        return 2 * k_i_in - self.gamma * self.s_tot[c] * self.k_i[node] / self.m
+        return 2 * k_i_in - self.gamma * self.s_tot[c] * (self.k_i[node] + self.k_i_extra[node]) / self.m
 
     '''
         Performs the first phase of the method.
@@ -182,7 +189,7 @@ class PyLouvain:
                     if e[0][0] == node and self.communities[e[0][1]] == node_community or e[0][1] == node and self.communities[e[0][0]] == node_community:
                         best_shared_links += e[1]
                 self.s_in[node_community] -= 2 * (best_shared_links + self.w[node])
-                self.s_tot[node_community] -= self.k_i[node]
+                self.s_tot[node_community] -= (self.k_i[node] + self.k_i_extra[node])
                 self.communities[node] = -1
                 communities = {} # only consider neighbors of different communities
                 for neighbor in self.get_neighbors(node):
@@ -206,7 +213,7 @@ class PyLouvain:
                 best_partition[best_community].append(node)
                 self.communities[node] = best_community
                 self.s_in[best_community] += 2 * (best_shared_links + self.w[node])
-                self.s_tot[best_community] += self.k_i[node]
+                self.s_tot[best_community] += (self.k_i[node] + self.k_i_extra[node])
                 if node_community != best_community:
                     improvement = 1
             if not improvement:
@@ -233,7 +240,7 @@ class PyLouvain:
     def make_initial_partition(self, network):
         partition = [[node] for node in network[0]]
         self.s_in = [0 for node in network[0]]
-        self.s_tot = [self.k_i[node] for node in network[0]]
+        self.s_tot = [self.k_i[node] + self.k_i_extra[node] for node in network[0]]
         for e in network[1]:
             if e[0][0] == e[0][1]: # only self-loops
                 self.s_in[e[0][0]] += e[1]
@@ -269,6 +276,14 @@ class PyLouvain:
             except KeyError:
                 edges_[(ci, cj)] = e[1]
         edges_ = [(k, v) for k, v in edges_.items()]
+        
+        #xiaoyan2
+        k_i_extra_ = [0 for n in nodes_]
+        for i in network[0]:
+            ci = self.communities[i]
+            k_i_extra_[ci] += self.k_i_extra[i]
+        self.k_i_extra = k_i_extra_
+
         # recomputing k_i vector and storing edges by node
         self.k_i = [0 for n in nodes_]
         self.edges_of_node = {}

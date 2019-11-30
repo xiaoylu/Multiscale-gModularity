@@ -39,7 +39,8 @@ def LFR(n, tau1, tau2, mu, min_com_size, force = False):
         return G
 
 if __name__ == "__main__":
-    verbose = False 
+    print("Start!")
+    verbose = True 
 
     #=========== Global Parameters ===========#
     import sys

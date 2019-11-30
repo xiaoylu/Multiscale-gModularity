@@ -22,7 +22,7 @@ def hist(sizes_distri, figname):
     hist, bin_edges = np.histogram(a, bins = mybins)
     x, y = zip(*[(a, b) for a, b in zip(bin_edges[1:], hist) if b > 0])
     print(label, hist)
-    
+
     y_norm = y / sum(y)
 
     plt.plot(x, y_norm, marker[i], label=label, linewidth = 2, markersize = 10) 
@@ -40,9 +40,10 @@ def hist(sizes_distri, figname):
 ##########################################################################################
 
 def test(graphname, gnc = None):
-    pyl = PyLouvain.from_file("data/%s.txt" % graphname)
+    nodes, edges = PyLouvain.from_file("data/%s.txt" % graphname)
+    pyl = PyLouvain(nodes, edges)
 
-    name_pickle = 'fig/save_%s_%d.p' % (graphname, len(pyl.nodes))
+    name_pickle = 'fig/save_%s_%d.p' % (graphname, len(nodes))
     if not os.path.isfile(name_pickle):
       print("pickle file", name_pickle, "is missing. Recompute.")
 
@@ -51,7 +52,7 @@ def test(graphname, gnc = None):
       print("Modularity Time", time.time() - start)
 
       start = time.time()
-      partition2 = multiscale(pyl.nodes, pyl.edges, 0.5)
+      partition2 = multiscale(nodes, edges, 0.5)
       print("Multiscale Time", time.time() - start)
 
       results = {"LV": partition, "MS": partition2}
@@ -75,13 +76,13 @@ def test(graphname, gnc = None):
         for j in x:
           gnc_map[int(j)] = i
       
-      gnc_list = [gnc_map[k] for k in pyl.nodes]
+      gnc_list = [gnc_map[k] for k in nodes]
       
       lv_map = {v:i for i, c in enumerate(partition) for v in c}
-      lv_list = [lv_map[k] for k in pyl.nodes]
+      lv_list = [lv_map[k] for k in nodes]
 
       ms_map = {v:i for i, c in enumerate(partition2) for v in c}
-      ms_list = [ms_map[k] for k in pyl.nodes]
+      ms_list = [ms_map[k] for k in nodes]
 
       print("Louvain NMI=", normalized_mutual_info_score(lv_list, gnc_list) )
       print("Multi-scale NMI=", normalized_mutual_info_score(ms_list, gnc_list) )
@@ -93,26 +94,32 @@ def test(graphname, gnc = None):
 #test("com-dblp.ungraph", "data/com-dblp.all.cmty.txt")
 
 def test_citations():
-    pyl = PyLouvain.from_file("data/hep-th-citations")
+    nodes, edges = PyLouvain.from_file("data/hep-th-citations")
+    pyl = PyLouvain(nodes, edges)
     partition, q = pyl.apply_method()
     print(partition, q)
 
 def test_karate_club():
-    pyl = PyLouvain.from_file("data/karate.txt")
-    partition, q = pyl.apply_method(gamma = 0.7)
-    odds = bayes_model_selection(pyl, partition)
+    nodes, edges = PyLouvain.from_file("data/karate.txt")
+    pyl = PyLouvain(nodes, edges)
+    partition, q = pyl.apply_method(gamma = 1.0)
+    odds = bayes_model_selection(nodes, edges, partition)
 
     print(partition, q, odds)
 
 #test_karate_club()
 
 def test_lesmis():
-    pyl = PyLouvain.from_gml_file("data/lesmis.gml")
+    nodes, edges = PyLouvain.from_gml_file("data/lesmis.gml")
+    pyl = PyLouvain(nodes, edges)
+
     partition, q = pyl.apply_method()
     print(partition, q)
 
 def test_polbooks():
-    pyl = PyLouvain.from_gml_file("data/polbooks.gml")
+    nodes, edges = PyLouvain.from_gml_file("data/polbooks.gml")
+    pyl = PyLouvain(nodes, edges)
+
     partition, q = pyl.apply_method()
     print(partition, q)
 
@@ -125,9 +132,10 @@ def test_football():
 
     x, y, z, r = [], [], [], []
     for gamma in np.linspace(0.5, 8.5, num = 35): 
-        pyl = PyLouvain.from_file("data/football.txt")
+        nodes, edges = PyLouvain.from_file("data/football.txt")
+        pyl = PyLouvain(nodes, edges)
         partition, q = pyl.apply_method(gamma)
-        odds = bayes_model_selection(pyl.nodes, pyl.edges, partition)
+        odds = bayes_model_selection(nodes, edges, partition)
 
         print(len(partition), odds)
         x.append(gamma)
@@ -135,8 +143,8 @@ def test_football():
         z.append(len(partition))
 
         comm = {n:i for i, ns in enumerate(partition) for n in ns}
-        a = [comm[i] for i in pyl.nodes]
-        b = [gnc[order_[i]] for i in pyl.nodes]
+        a = [comm[i] for i in nodes]
+        b = [gnc[order_[i]] for i in nodes]
         #print("NMI=", metrics.adjusted_mutual_info_score(a, b))
 
         r.append(metrics.adjusted_mutual_info_score(a, b))
@@ -158,17 +166,18 @@ def test_football():
 def test_football2():
 
     for gamma in np.linspace(0.4, 0.9, num=10):
+        print()
         print("gamma=", gamma)
-        pyl = PyLouvain.from_file("data/football.txt")
-        partition = multiscale(pyl.nodes, pyl.edges, gamma)
+        nodes, edges = PyLouvain.from_file("data/football.txt")
+        partition = multiscale(nodes, edges, gamma)
 
         # load GNC ground truth by txt file (as defined by conference)
         fconf = open("data/football.gnc.txt", "r")
         gnc = {str(i):int(line.strip()) for i, line in enumerate(fconf)}
         order_ = {i:stri for i, stri in enumerate(sorted(gnc.keys()))}
         comm = {n:i for i, ns in enumerate(partition) for n in ns}
-        a = [comm[i] for i in pyl.nodes]
-        b = [gnc[order_[i]] for i in pyl.nodes]
+        a = [comm[i] for i in nodes]
+        b = [gnc[order_[i]] for i in nodes]
 
         print("NMI=", metrics.adjusted_mutual_info_score(a, b))
 
